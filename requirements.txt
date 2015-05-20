@@ -1,0 +1,3 @@
+click==4.0
+-e git+git@github.com:Optibus/jenkins-status.git@803e780ea3f487d4cb99fff8a5c93f4c7e5beb39#egg=jenkinsstatus-master
+requests==2.7.0

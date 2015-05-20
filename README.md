@@ -1,5 +1,3 @@
 # jenkins-status
 
-Which tags were built, tested and can be deployed.
-
-Works by querying Jenkins.
+A utility to extract useful information from a local Jenkins server: which tags were built, tested and can be deployed.
