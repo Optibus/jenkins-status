@@ -123,7 +123,10 @@ def armada(branch, debug, limit):
     headers = ["#", "time", "hash", "build", "euclid-test", "int-test"]
     rows = []
 
-    for n in reversed(sorted(results.keys())):
+    build_numbers = list(reversed(sorted(results.keys())))
+    if limit:
+        build_numbers = build_numbers[:limit]
+    for n in build_numbers:
         r = results[n]
         rows.append([n, r["time"], r["hash"], r["build"], r["euclid-test"], r["int-test"]])
 
