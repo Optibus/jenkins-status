@@ -97,6 +97,9 @@ def armada(branch, debug, limit):
                 'number' : n,
                 'hash' : envars['TAG'],
                 'deployable': False,
+                'build' : '',
+                'euclid-test' : '',
+                'int-test' : ''
             }
         except Exception, e:
             dbg("Error processing build %d: " % n + str(e))
