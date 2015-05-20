@@ -1,4 +1,5 @@
 import click
+import sys
 from termcolor import colored
 from tabulate import tabulate
 from datetime import datetime
@@ -31,7 +32,11 @@ def cli():
     pass
 
 def all_project_builds(project_name):
-    return getjson("/job/" + project_name)["builds"]
+    try:
+        return getjson("/job/" + project_name)["builds"]
+    except:
+        sys.stderr.write("No such job in Jenkins\n")
+        sys.exit(1)
 
 
 def get_build(name, number):
@@ -122,7 +127,7 @@ def armada(branch, debug, limit):
         results[n] = r
     headers = ["#", "time", "tag", "build"]
     for suite in TEST_SUITES:
-        headers.append("%s-test" % suite)
+        headers.append("%s-test" % suite[:6])
     rows = []
 
     build_numbers = list(reversed(sorted(results.keys())))
