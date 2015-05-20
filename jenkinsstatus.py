@@ -8,6 +8,7 @@ import requests
 LOCAL_JENKINS_PORT=8080
 PROTOCOL_SUFFIX="api/json?pretty=true"
 DEBUG=False
+TEST_SUITES = ["integration", "euclid"]
 
 def endpoint():
     return "http://localhost:%d" % LOCAL_JENKINS_PORT
@@ -41,7 +42,7 @@ def get_build_envars(name, number):
     return getjson("/job/%s/%d/injectedEnvVars" % (name, number))['envMap']
 
 
-def tests_by_hash(test_suite, branch):
+def tests_by_tag(test_suite, branch):
     project = "%s-test-%s" % (branch, test_suite)
     builds = all_project_builds(project)
     r = {}
@@ -81,11 +82,9 @@ def armada(branch, debug, limit):
     builds = all_project_builds(build_project)
 
     results = {}
-    euclid_tests = tests_by_hash("euclid", branch)
-    dbg(euclid_tests)
-    integration_tests = tests_by_hash("integration", branch)
+    tests = { suite : tests_by_tag(suite, branch) for suite in TEST_SUITES }
     
-    hashes_seen = set()
+    tages_seen = set()
     for b in builds:
         n = b["number"]
         dbg("Processing build %d" % n)
@@ -95,12 +94,12 @@ def armada(branch, debug, limit):
             r = {
                 'details' : build_result,
                 'number' : n,
-                'hash' : envars['TAG'],
+                'tag' : envars['TAG'],
                 'deployable': False,
                 'build' : '',
-                'euclid-test' : '',
-                'int-test' : ''
             }
+            for suite in TEST_SUITES:
+                r["%s-test" % suite] = ''
         except Exception, e:
             dbg("Error processing build %d: " % n + str(e))
             continue
@@ -109,18 +108,21 @@ def armada(branch, debug, limit):
         
         r['time'] = datetime.fromtimestamp(ts / 1000)
 
-        if r['hash'] in hashes_seen:
+        if r['tag'] in tages_seen:
             continue
-        hashes_seen.add(r['hash'])
+        tages_seen.add(r['tag'])
 
         r['build'] = status_rep(build_result)
 
         if build_result['result'] == "SUCCESS":
-            r['euclid-test'] = status_rep(euclid_tests[r['hash']]['status'])
-            r['int-test'] = status_rep(integration_tests[r['hash']]['status'])
+            for suite in TEST_SUITES:
+                tag = r['tag']
+                r["%s-test" % suite] = status_rep(tests[suite][tag]['status'])
 
         results[n] = r
-    headers = ["#", "time", "hash", "build", "euclid-test", "int-test"]
+    headers = ["#", "time", "tag", "build"]
+    for suite in TEST_SUITES:
+        headers.append("%s-test" % suite)
     rows = []
 
     build_numbers = list(reversed(sorted(results.keys())))
@@ -128,7 +130,11 @@ def armada(branch, debug, limit):
         build_numbers = build_numbers[:limit]
     for n in build_numbers:
         r = results[n]
-        rows.append([n, r["time"], r["hash"], r["build"], r["euclid-test"], r["int-test"]])
+        row = [n, r["time"], r["tag"], r["build"]]
+        for suite in TEST_SUITES:
+            dbg(r)
+            row.append(r["%s-test" % suite])
+        rows.append(row)
 
     print tabulate(rows, headers=headers)
     
