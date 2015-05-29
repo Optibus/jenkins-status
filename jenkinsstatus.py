@@ -122,7 +122,8 @@ def armada(branch, debug, limit):
         if build_result['result'] == "SUCCESS":
             for suite in TEST_SUITES:
                 tag = r['tag']
-                r["%s-test" % suite] = status_rep(tests[suite][tag]['status'])
+                if tag in tests[suite]:
+                    r["%s-test" % suite] = status_rep(tests[suite][tag]['status'])
 
         results[n] = r
     headers = ["#", "time", "tag", "build"]
