@@ -89,7 +89,7 @@ def armada(branch, debug, limit):
     results = {}
     tests = { suite : tests_by_tag(suite, branch) for suite in TEST_SUITES }
     
-    tages_seen = set()
+    tags_seen = set()
     for b in builds:
         n = b["number"]
         dbg("Processing build %d" % n)
@@ -113,9 +113,9 @@ def armada(branch, debug, limit):
         
         r['time'] = datetime.fromtimestamp(ts / 1000)
 
-        if r['tag'] in tages_seen:
+        if r['tag'] in tags_seen:
             continue
-        tages_seen.add(r['tag'])
+        tags_seen.add(r['tag'])
 
         r['build'] = status_rep(build_result)
 
