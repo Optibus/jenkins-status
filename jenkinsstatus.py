@@ -51,8 +51,8 @@ def tests_by_tag(test_suite, branch):
     project = "%s-test-%s" % (branch, test_suite)
     builds = all_project_builds(project)
     r = {}
-
-    for b in builds:
+    builds.sort(key=lambda b: int(b["number"]))
+    for b in builds[-20:]:
         n = b["number"]
         envars = get_build_envars(project, n)
         status = get_build(project, n)
