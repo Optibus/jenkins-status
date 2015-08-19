@@ -9,7 +9,7 @@ import requests
 LOCAL_JENKINS_PORT=8080
 PROTOCOL_SUFFIX="api/json?pretty=true"
 DEBUG=False
-TEST_SUITES = ["integration", "euclid"]
+TEST_SUITES = ["integration", "euclid", "e2e"]
 
 def endpoint():
     return "http://localhost:%d" % LOCAL_JENKINS_PORT
