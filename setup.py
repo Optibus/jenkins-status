@@ -7,6 +7,7 @@ setup(
     install_requires=[
         'Click',
         'termcolor',
+        'requests',
         'tabulate',
     ],
     entry_points='''
