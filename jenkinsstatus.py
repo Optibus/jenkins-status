@@ -6,30 +6,37 @@ from datetime import datetime
 import json
 import requests
 
-LOCAL_JENKINS_PORT=8080
-PROTOCOL_SUFFIX="api/json?pretty=true"
-DEBUG=False
+LOCAL_JENKINS_PORT = 8080
+PROTOCOL_SUFFIX = "api/json?pretty=true"
+DEBUG = False
+NO_COLOR = False
+
 TEST_SUITES = ["integration", "euclid", "e2e"]
+
 
 def endpoint():
     return "http://localhost:%d" % LOCAL_JENKINS_PORT
+
 
 def dbg(msg):
     if DEBUG:
         print msg
 
+
 def get(url):
     return requests.get(endpoint() + url)
+
 
 def getjson(path):
     j = get(path + "/" + PROTOCOL_SUFFIX).text
     dbg(j)
     return json.loads(j)
-    
+
 
 @click.group()
 def cli():
     pass
+
 
 def all_project_builds(project_name):
     try:
@@ -56,39 +63,45 @@ def tests_by_tag(test_suite, branch):
         n = b["number"]
         envars = get_build_envars(project, n)
         status = get_build(project, n)
-        if not 'TAG' in envars:
+        if 'TAG' not in envars:
             continue
 
         tag = envars['TAG']
         if tag in r:
             continue
         r[tag] = {
-            "env" : envars,
-            "status" : status
+            "env": envars,
+            "status": status
         }
     return r
 
+
 def status_rep(status):
+    global NO_COLOR
     if status['building']:
         return "..."
     if status['result'] == 'SUCCESS':
-        return colored("V", "green")
-    return colored("X", "red")
+        return "V" if NO_COLOR else colored("V", "green")
+    return "X" if NO_COLOR else colored("X", "red")
+
 
 @cli.command()
 @click.argument("branch")
 @click.option("--limit", type=click.types.INT, default=20)
 @click.option("--debug", is_flag=True, default=False)
-def armada(branch, debug, limit):
+@click.option("--no-color", is_flag=True, default=False)
+def armada(branch, debug, limit, no_color):
     global DEBUG
     DEBUG = debug
+    global NO_COLOR
+    NO_COLOR = no_color
     build_project = "%s-build-docker" % branch
 
     builds = all_project_builds(build_project)
 
     results = {}
-    tests = { suite : tests_by_tag(suite, branch) for suite in TEST_SUITES }
-    
+    tests = {suite: tests_by_tag(suite, branch) for suite in TEST_SUITES}
+
     tags_seen = set()
     for b in builds:
         n = b["number"]
@@ -97,11 +110,11 @@ def armada(branch, debug, limit):
         envars = get_build_envars(build_project, n)
         try:
             r = {
-                'details' : build_result,
-                'number' : n,
-                'tag' : envars['TAG'],
+                'details': build_result,
+                'number': n,
+                'tag': envars['TAG'],
                 'deployable': False,
-                'build' : '',
+                'build': '',
             }
             for suite in TEST_SUITES:
                 r["%s-test" % suite] = ''
@@ -110,7 +123,7 @@ def armada(branch, debug, limit):
             continue
 
         ts = build_result['timestamp']
-        
+
         r['time'] = datetime.fromtimestamp(ts / 1000)
 
         if r['tag'] in tags_seen:
@@ -143,7 +156,6 @@ def armada(branch, debug, limit):
         rows.append(row)
 
     print tabulate(rows, headers=headers)
-    
 
 
 if __name__ == "__main__":
