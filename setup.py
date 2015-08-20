@@ -6,6 +6,8 @@ setup(
     py_modules=['jenkinsstatus'],
     install_requires=[
         'Click',
+        'termcolor',
+        'tabulate',
     ],
     entry_points='''
         [console_scripts]
