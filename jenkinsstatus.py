@@ -61,18 +61,22 @@ def tests_by_tag(test_suite, branch):
     builds.sort(key=lambda b: int(b["number"]))
     for b in builds[-20:]:
         n = b["number"]
-        envars = get_build_envars(project, n)
-        status = get_build(project, n)
-        if 'TAG' not in envars:
-            continue
+        try:
+            envars = get_build_envars(project, n)
+            status = get_build(project, n)
+            if 'TAG' not in envars:
+                continue
 
-        tag = envars['TAG']
-        if tag in r:
+            tag = envars['TAG']
+            if tag in r:
+                continue
+            r[tag] = {
+                "env": envars,
+                "status": status
+            }
+        except Exception, e:
+            dbg("Error processing build %d: " % n + str(e))
             continue
-        r[tag] = {
-            "env": envars,
-            "status": status
-        }
     return r
 
 
@@ -106,9 +110,10 @@ def armada(branch, debug, limit, no_color):
     for b in builds:
         n = b["number"]
         dbg("Processing build %d" % n)
-        build_result = get_build(build_project, n)
-        envars = get_build_envars(build_project, n)
         try:
+            build_result = get_build(build_project, n)
+            envars = get_build_envars(build_project, n)
+
             r = {
                 'details': build_result,
                 'number': n,
