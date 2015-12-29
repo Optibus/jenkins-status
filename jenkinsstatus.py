@@ -152,6 +152,8 @@ def armada(branch, debug, limit, no_color):
     rows = []
 
     build_numbers = list(reversed(sorted(results.keys())))
+    if limit:
+        build_numbers = build_numbers[:limit]
     for n in build_numbers:
         r = results[n]
         row = [n, r["time"], r["tag"], r["build"]]
