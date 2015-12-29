@@ -38,12 +38,14 @@ def cli():
     pass
 
 
-def all_project_builds(project_name):
+def all_project_builds(project_name, exit_on_missing):
     try:
         return getjson("/job/" + project_name)["builds"]
     except:
-        sys.stderr.write("No such job in Jenkins\n")
-        sys.exit(1)
+        if exit_on_missing:
+            sys.stderr.write("No such job in Jenkins\n")
+            sys.exit(1)
+        return []
 
 
 def get_build(name, number):
@@ -54,12 +56,12 @@ def get_build_envars(name, number):
     return getjson("/job/%s/%d/injectedEnvVars" % (name, number))['envMap']
 
 
-def tests_by_tag(test_suite, branch):
+def tests_by_tag(test_suite, branch, limit):
     project = "%s-test-%s" % (branch, test_suite)
-    builds = all_project_builds(project)
+    builds = all_project_builds(project, exit_on_missing=False)
     r = {}
     builds.sort(key=lambda b: int(b["number"]))
-    for b in builds[-20:]:
+    for b in builds[-limit:]:
         n = b["number"]
         try:
             envars = get_build_envars(project, n)
@@ -101,10 +103,10 @@ def armada(branch, debug, limit, no_color):
     NO_COLOR = no_color
     build_project = "%s-build-docker" % branch
 
-    builds = all_project_builds(build_project)
+    builds = all_project_builds(build_project, exit_on_missing=True)
 
     results = {}
-    tests = {suite: tests_by_tag(suite, branch) for suite in TEST_SUITES}
+    tests = {suite: tests_by_tag(suite, branch, builds) for suite in TEST_SUITES}
 
     tags_seen = set()
     for b in builds:
@@ -150,8 +152,6 @@ def armada(branch, debug, limit, no_color):
     rows = []
 
     build_numbers = list(reversed(sorted(results.keys())))
-    if limit:
-        build_numbers = build_numbers[:limit]
     for n in build_numbers:
         r = results[n]
         row = [n, r["time"], r["tag"], r["build"]]
