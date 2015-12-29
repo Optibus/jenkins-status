@@ -106,7 +106,7 @@ def armada(branch, debug, limit, no_color):
     builds = all_project_builds(build_project, exit_on_missing=True)
 
     results = {}
-    tests = {suite: tests_by_tag(suite, branch, builds) for suite in TEST_SUITES}
+    tests = {suite: tests_by_tag(suite, branch, limit) for suite in TEST_SUITES}
 
     tags_seen = set()
     for b in builds:
