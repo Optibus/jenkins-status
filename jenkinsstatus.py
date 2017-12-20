@@ -70,8 +70,6 @@ def tests_by_tag(test_suite, branch, limit):
                 continue
 
             tag = envars['TAG']
-            if tag in r:
-                continue
             r[tag] = {
                 "env": envars,
                 "status": status
