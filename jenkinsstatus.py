@@ -97,10 +97,14 @@ def status_rep(status):
 @click.option("--debug", is_flag=True, default=False)
 @click.option("--no-color", is_flag=True, default=False)
 def armada(branch, debug, limit, no_color):
+    armada_builds(branch, debug, limit, no_color)
+
+
+def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False):
     global DEBUG
     DEBUG = debug
     global NO_COLOR
-    NO_COLOR = no_color
+    NO_COLOR = no_color if not no_print else True
     build_project = "%s-build-docker" % branch
 
     builds = all_project_builds(build_project, exit_on_missing=True)
@@ -154,6 +158,10 @@ def armada(branch, debug, limit, no_color):
     build_numbers = list(reversed(sorted(results.keys())))
     if limit:
         build_numbers = build_numbers[:limit]
+
+    if no_print:
+        return [results[x] for x in build_numbers]
+
     for n in build_numbers:
         r = results[n]
         row = [n, r["time"], r["tag"], r["build"]]
