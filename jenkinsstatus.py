@@ -6,7 +6,7 @@ from datetime import datetime
 import json
 import requests
 
-LOCAL_JENKINS_PORT = 8080
+LOCAL_JENKINS_PORT = 3001
 PROTOCOL_SUFFIX = "api/json?pretty=true"
 DEBUG = False
 NO_COLOR = False
@@ -38,13 +38,13 @@ def cli():
     pass
 
 
-def all_project_builds(project_name, exit_on_missing):
+def all_project_builds(project_name, stderr_on_missing):
     try:
         return getjson("/job/" + project_name)["builds"]
     except:
-        if exit_on_missing:
+        if stderr_on_missing:
             sys.stderr.write("No such job in Jenkins\n")
-            sys.exit(1)
+
         return []
 
 
@@ -58,7 +58,7 @@ def get_build_envars(name, number):
 
 def tests_by_tag(test_suite, branch, limit):
     project = "%s-test-%s" % (branch, test_suite)
-    builds = all_project_builds(project, exit_on_missing=False)
+    builds = all_project_builds(project, stderr_on_missing=False)
     r = {}
     builds.sort(key=lambda b: int(b["number"]))
     for b in builds[-limit:]:
@@ -98,14 +98,16 @@ def armada(branch, debug, limit, no_color):
     armada_builds(branch, debug, limit, no_color)
 
 
-def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False):
+def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False, stderr_on_missing=True):
     global DEBUG
     DEBUG = debug
     global NO_COLOR
     NO_COLOR = no_color if not no_print else True
     build_project = "%s-build-docker" % branch
 
-    builds = all_project_builds(build_project, exit_on_missing=True)
+    builds = all_project_builds(build_project, stderr_on_missing=stderr_on_missing)
+    if not builds:
+        return []
 
     results = {}
     tests = {suite: tests_by_tag(suite, branch, limit) for suite in TEST_SUITES}
