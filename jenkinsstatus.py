@@ -44,6 +44,7 @@ def all_project_builds(project_name, stderr_on_missing):
     except:
         if stderr_on_missing:
             sys.stderr.write("No such job in Jenkins\n")
+            sys.exit(1)
 
         return []
 
