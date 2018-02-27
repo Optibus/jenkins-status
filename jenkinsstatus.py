@@ -6,7 +6,7 @@ from datetime import datetime
 import json
 import requests
 
-LOCAL_JENKINS_PORT = 3001
+LOCAL_JENKINS_PORT = 8080
 PROTOCOL_SUFFIX = "api/json?pretty=true"
 DEBUG = False
 NO_COLOR = False
