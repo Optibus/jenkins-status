@@ -6,12 +6,12 @@ from datetime import datetime
 import json
 import requests
 
-LOCAL_JENKINS_PORT = 8080
+LOCAL_JENKINS_PORT = 3001
 PROTOCOL_SUFFIX = "api/json?pretty=true"
 DEBUG = False
 NO_COLOR = False
 
-TEST_SUITES = ["integration", "euclid", "e2e", "testim"]
+TEST_SUITES = ["integration", "euclid", "e2e"]
 
 
 def endpoint():
@@ -107,75 +107,73 @@ def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False,
     build_project = "%s-build-docker" % branch
 
     session = requests.Session()
+    with session:
+        builds = all_project_builds(session, build_project, stderr_on_missing=stderr_on_missing)
+        if not builds:
+            return []
 
-    builds = all_project_builds(session, build_project, stderr_on_missing=stderr_on_missing)
-    if not builds:
-        session.close()
-        return []
+        results = {}
+        tests = {suite: tests_by_tag(session, suite, branch, limit) for suite in TEST_SUITES}
 
-    results = {}
-    tests = {suite: tests_by_tag(session, suite, branch, limit) for suite in TEST_SUITES}
+        tags_seen = set()
+        for b in builds[:limit]:
+            n = b["number"]
+            dbg("Processing build %d" % n)
+            try:
+                build_result = get_build(session, build_project, n)
+                envars = get_build_envars(session, build_project, n)
 
-    tags_seen = set()
-    for b in builds[:limit]:
-        n = b["number"]
-        dbg("Processing build %d" % n)
-        try:
-            build_result = get_build(session, build_project, n)
-            envars = get_build_envars(session, build_project, n)
+                r = {
+                    'details': build_result,
+                    'number': n,
+                    'tag': envars['TAG'],
+                    'deployable': False,
+                    'build': '',
+                }
+                for suite in TEST_SUITES:
+                    r["%s-test" % suite] = ''
+            except Exception, e:
+                dbg("Error processing build %d: " % n + str(e))
+                continue
 
-            r = {
-                'details': build_result,
-                'number': n,
-                'tag': envars['TAG'],
-                'deployable': False,
-                'build': '',
-            }
-            for suite in TEST_SUITES:
-                r["%s-test" % suite] = ''
-        except Exception, e:
-            dbg("Error processing build %d: " % n + str(e))
-            continue
+            ts = build_result['timestamp']
 
-        ts = build_result['timestamp']
+            r['time'] = datetime.fromtimestamp(ts / 1000)
 
-        r['time'] = datetime.fromtimestamp(ts / 1000)
+            if r['tag'] in tags_seen:
+                continue
+            tags_seen.add(r['tag'])
 
-        if r['tag'] in tags_seen:
-            continue
-        tags_seen.add(r['tag'])
+            r['build'] = status_rep(build_result)
 
-        r['build'] = status_rep(build_result)
+            if build_result['result'] == "SUCCESS":
+                for suite in TEST_SUITES:
+                    tag = r['tag']
+                    if tag in tests[suite]:
+                        r["%s-test" % suite] = status_rep(tests[suite][tag]['status'])
 
-        if build_result['result'] == "SUCCESS":
-            for suite in TEST_SUITES:
-                tag = r['tag']
-                if tag in tests[suite]:
-                    r["%s-test" % suite] = status_rep(tests[suite][tag]['status'])
-
-        results[n] = r
-    headers = ["#", "time", "tag", "build"]
-    for suite in TEST_SUITES:
-        headers.append("%s-test" % suite[:6])
-    rows = []
-
-    build_numbers = list(reversed(sorted(results.keys())))
-    if limit:
-        build_numbers = build_numbers[:limit]
-
-    if no_print:
-        return [results[x] for x in build_numbers]
-
-    for n in build_numbers:
-        r = results[n]
-        row = [n, r["time"], r["tag"], r["build"]]
+            results[n] = r
+        headers = ["#", "time", "tag", "build"]
         for suite in TEST_SUITES:
-            dbg(r)
-            row.append(r["%s-test" % suite])
-        rows.append(row)
+            headers.append("%s-test" % suite[:6])
+        rows = []
 
-    session.close()
-    print tabulate(rows, headers=headers)
+        build_numbers = list(reversed(sorted(results.keys())))
+        if limit:
+            build_numbers = build_numbers[:limit]
+
+        if no_print:
+            return [results[x] for x in build_numbers]
+
+        for n in build_numbers:
+            r = results[n]
+            row = [n, r["time"], r["tag"], r["build"]]
+            for suite in TEST_SUITES:
+                dbg(r)
+                row.append(r["%s-test" % suite])
+            rows.append(row)
+
+        print tabulate(rows, headers=headers)
 
 
 if __name__ == "__main__":
