@@ -23,12 +23,12 @@ def dbg(msg):
         print msg
 
 
-def get(url):
-    return requests.get(endpoint() + url)
+def get(session, url):
+    return session.get(endpoint() + url)
 
 
-def getjson(path):
-    j = get(path + "/" + PROTOCOL_SUFFIX).text
+def getjson(session, path):
+    j = get(session, path + "/" + PROTOCOL_SUFFIX).text
     dbg(j)
     return json.loads(j)
 
@@ -38,9 +38,9 @@ def cli():
     pass
 
 
-def all_project_builds(project_name, stderr_on_missing):
+def all_project_builds(session, project_name, stderr_on_missing):
     try:
-        return getjson("/job/" + project_name)["builds"]
+        return getjson(session, "/job/" + project_name)["builds"]
     except:
         if stderr_on_missing:
             sys.stderr.write("No such job in Jenkins\n")
@@ -49,24 +49,24 @@ def all_project_builds(project_name, stderr_on_missing):
         return []
 
 
-def get_build(name, number):
-    return getjson("/job/%s/%d" % (name, number))
+def get_build(session, name, number):
+    return getjson(session, "/job/%s/%d" % (name, number))
 
 
-def get_build_envars(name, number):
-    return getjson("/job/%s/%d/injectedEnvVars" % (name, number))['envMap']
+def get_build_envars(session, name, number):
+    return getjson(session, "/job/%s/%d/injectedEnvVars" % (name, number))['envMap']
 
 
-def tests_by_tag(test_suite, branch, limit):
+def tests_by_tag(session, test_suite, branch, limit):
     project = "%s-test-%s" % (branch, test_suite)
-    builds = all_project_builds(project, stderr_on_missing=False)
+    builds = all_project_builds(session, project, stderr_on_missing=False)
     r = {}
     builds.sort(key=lambda b: int(b["number"]))
     for b in builds[-limit:]:
         n = b["number"]
         try:
-            envars = get_build_envars(project, n)
-            status = get_build(project, n)
+            envars = get_build_envars(session, project, n)
+            status = get_build(session, project, n)
             if 'TAG' not in envars:
                 continue
 
@@ -106,20 +106,23 @@ def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False,
     NO_COLOR = no_color if not no_print else True
     build_project = "%s-build-docker" % branch
 
-    builds = all_project_builds(build_project, stderr_on_missing=stderr_on_missing)
+    session = requests.Session()
+
+    builds = all_project_builds(session, build_project, stderr_on_missing=stderr_on_missing)
     if not builds:
+        session.close()
         return []
 
     results = {}
-    tests = {suite: tests_by_tag(suite, branch, limit) for suite in TEST_SUITES}
+    tests = {suite: tests_by_tag(session, suite, branch, limit) for suite in TEST_SUITES}
 
     tags_seen = set()
-    for b in builds:
+    for b in builds[:limit]:
         n = b["number"]
         dbg("Processing build %d" % n)
         try:
-            build_result = get_build(build_project, n)
-            envars = get_build_envars(build_project, n)
+            build_result = get_build(session, build_project, n)
+            envars = get_build_envars(session, build_project, n)
 
             r = {
                 'details': build_result,
@@ -171,6 +174,7 @@ def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False,
             row.append(r["%s-test" % suite])
         rows.append(row)
 
+    session.close()
     print tabulate(rows, headers=headers)
 
 
