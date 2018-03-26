@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='jenkinsstatus',
-    version='0.1.8',
+    version='0.1.9',
     py_modules=['jenkinsstatus'],
     install_requires=[
         'Click',
