@@ -131,7 +131,10 @@ def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False,
                     'build': '',
                 }
                 for suite in TEST_SUITES:
-                    r["%s-test" % suite] = ''
+                    if tests[suite]:
+                        r["%s-test" % suite] = ''
+                    else:
+                        r["%s-test" % suite] = '---'
             except Exception, e:
                 dbg("Error processing build %d: " % n + str(e))
                 continue
@@ -177,4 +180,4 @@ def armada_builds(branch, debug=False, limit=20, no_color=False, no_print=False,
 
 
 if __name__ == "__main__":
-    cli()
+    armada_builds('hotfix')
