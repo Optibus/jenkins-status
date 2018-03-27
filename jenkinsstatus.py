@@ -11,7 +11,7 @@ PROTOCOL_SUFFIX = "api/json?pretty=true"
 DEBUG = False
 NO_COLOR = False
 
-TEST_SUITES = ["integration", "euclid", "e2e"]
+TEST_SUITES = ["integration", "euclid", "e2e", "testim"]
 
 
 def endpoint():
